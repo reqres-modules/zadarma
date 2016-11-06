@@ -1,0 +1,19 @@
+{
+    "name": "bumax/module-zadarma",
+    "description": "Reqres Zadarma Module",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Max Buldovsky",
+            "email": "max@buldovsky.ru"
+        }
+    ],
+    "require": {
+        "zadarma/user-api-v1": "1.0.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Reqres\\Module\\Zadarma\\": "src/"
+        }
+    }        
+}
