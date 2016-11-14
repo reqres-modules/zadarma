@@ -9,7 +9,6 @@ trait Controller {
 
     // !!! нужно оставить возможность менять путь и IPшник
     // с этого адреса обычно приходят колбэки
-
     
     abstract function zadarma_get_secret();
     
@@ -18,12 +17,10 @@ trait Controller {
      * 
      *
      */
-	function zadarma_index()
+    function zadarma_index()
     {
-        
-
         /*
-		// получаем время последнего обращения к серверу
+        // получаем время последнего обращения к серверу
         // по-умолчанию это время последнего изменения файла zadarma_data.json
         // который хранится по указанному пути и который содержит в себе
         // общую информацию о текущем аккаунте 
@@ -77,10 +74,9 @@ trait Controller {
         // время начала звонка
         $this-> call_datetime = POST::call_start() or die;
         // id звонка;
-		$this-> pbx_call_id = POST::pbx_call_id();
-		// (опциональный) внутренний номер
+        $this-> pbx_call_id = POST::pbx_call_id();
+        // (опциональный) внутренний номер
         $this-> internal = POST::internal();
-
 
         if(SERVER::REMOTE_ADDR() !== '185.45.152.42') die;
         
@@ -140,6 +136,4 @@ trait Controller {
         
         die;
     }
-        
-
 }
