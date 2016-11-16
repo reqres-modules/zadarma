@@ -4,14 +4,14 @@ namespace Reqres\Module\Zadarma;
 trait Model {
     
     
-    static $zadarma_client;
+    static $mod_zadarma_client;
     
     
-    static function zadarma_client($keys)
+    static function mod_zadarma_client($keys)
     {
         
-        if(!isset(static::$zadarma_client))
-            static::$zadarma_client = new \Zadarma_API\Client($keys[0], $keys[1]);        
+        if(!isset(static::$mod_zadarma_client))
+            static::$mod_zadarma_client = new \Zadarma_API\Client($keys[0], $keys[1]);        
         
     }
 
@@ -20,14 +20,14 @@ trait Model {
      * Выполняем запрос к сервису Zadarma через API
      *
      */
-    static function zadarma_api()
+    static function mod_zadarma_api()
 	{
 		
         $args = func_get_args();
 
-        if(!isset(static::$zadarma_client)) throw new \Exception('Not authorized');
+        if(!isset(static::$mod_zadarma_client)) throw new \Exception('Not authorized');
         
-        $result = call_user_func_array([static::$zadarma_client, 'call'], $args);
+        $result = call_user_func_array([static::$mod_zadarma_client, 'call'], $args);
         
         $result = json_decode($result);
 
@@ -52,7 +52,7 @@ trait Model {
      * Скачиваем аудиозапись
      *
      */       
-    function zadarma_save_record($basedir, $link, $call_id, $basename = null)
+    function mod_zadarma_save_record($basedir, $link, $call_id, $basename = null)
     {
 
         if(!$basename) $basename = basename($link[0]);
@@ -73,7 +73,7 @@ trait Model {
      * баланс пользователя
      *
      */
-    static function zadarma_api_balance()
+    static function mod_zadarma_api_balance()
     {
     
         /*
@@ -83,7 +83,7 @@ trait Model {
             "currency":"USD"
         }
         */
-        return static::zadarma_api('/v1/info/balance/');
+        return static::mod_zadarma_api('/v1/info/balance/');
         
     }
     
@@ -93,7 +93,7 @@ trait Model {
      * стоимость звонка с учетом текущего тарифа пользователя
      *
      */    
-    static function zadarma_api_prise($number, $caller_id = null)
+    static function mod_zadarma_api_prise($number, $caller_id = null)
     {
         /*
         {
@@ -106,7 +106,7 @@ trait Model {
             }
         }
         */
-        return static::zadarma_api('/v1/info/price/', [
+        return static::mod_zadarma_api('/v1/info/price/', [
             'number' => $number, //'48721000000',
             'caller_id' => $caller_id //'49100000000' // optional
         ]);
@@ -119,7 +119,7 @@ trait Model {
      * информация о текущем тарифе пользователя.
      *
      */
-    static function zadarma_api_tariff()
+    static function mod_zadarma_api_tariff()
     {
     
         /*
@@ -139,7 +139,7 @@ trait Model {
             }
         }
         */
-        return static::zadarma_api('/v1/tariff/');
+        return static::mod_zadarma_api('/v1/tariff/');
       
     }
       
@@ -148,7 +148,7 @@ trait Model {
      * отображение внутренних номеров АТС. 
      *
      */
-    static function zadarma_api_internal()
+    static function mod_zadarma_api_internal()
     {
     
         /*
@@ -162,7 +162,7 @@ trait Model {
             ]
         }
         */
-        return static::zadarma_api('/v1/pbx/internal/');
+        return static::mod_zadarma_api('/v1/pbx/internal/');
         
     }    
 
@@ -174,7 +174,7 @@ trait Model {
      * @param number – номер телефона
      *
      */    
-    static function zadarma_api_internal_status($number)
+    static function mod_zadarma_api_internal_status($number)
     {
         /*
         {
@@ -184,7 +184,7 @@ trait Model {
             "is_online":"false"			online-статус (true|false)
         }
         */
-        return static::zadarma_api('/v1/pbx/internal/'.(int) $number.'/status/');
+        return static::mod_zadarma_api('/v1/pbx/internal/'.(int) $number.'/status/');
         
     }
     
@@ -201,7 +201,7 @@ trait Model {
      * @param predicted (опционально) – если указан этот флаг, то запрос является предикативным (система изначально звонит 
      *            на номер "to" и только если ему дозванивается, соединяет с вашим SIP либо телефонным номером);     
      */    
-    static function zadarma_api_callback($to, $from, $sip = null, $predicted = false)
+    static function mod_zadarma_api_callback($to, $from, $sip = null, $predicted = false)
     {
         /*
         {
@@ -211,7 +211,7 @@ trait Model {
             "time": 1435573082
         }
         */
-        return static::zadarma_api('/v1/request/callback/', [
+        return static::mod_zadarma_api('/v1/request/callback/', [
             'from' => $from,
             'to' => $to,
             'sip' => $sip,
@@ -232,7 +232,7 @@ trait Model {
      * !!! документация задармы чуть-чуть припиздёхивает возвращается не link а links (массив) 
      *
      */    
-    static function zadarma_api_record($call_id, $life_time = null, $pbx_call_id = null)
+    static function mod_zadarma_api_record($call_id, $life_time = null, $pbx_call_id = null)
     {
         /*
         {
@@ -241,7 +241,7 @@ trait Model {
             "lifetime_till": "2016-01-01 23:56:22"
         }
         */
-        return static::zadarma_api('/v1/pbx/record/request/', [
+        return static::mod_zadarma_api('/v1/pbx/record/request/', [
             
             'call_id' => $call_id, //'1458832388.1585217'
             'lifetime' => $life_time, // 180
