@@ -12,7 +12,7 @@ trait View {
 	 * @param caller_name – можно дать имя входящему номеру.
      *
      */
-    function zadarma_inbound_redirect($redirect, $caller_name)
+    function mod_zadarma_inbound_redirect($redirect, $caller_name)
     {
 
         exit(json_encode([
@@ -34,6 +34,6 @@ trait View {
      * @param message Текст ошибки
      *
      */
-    abstract function zadarma_error($message);
+    abstract function mod_zadarma_error($message);
     
 }
