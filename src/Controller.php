@@ -2,6 +2,7 @@
 namespace Reqres\Module\Zadarma;
 
 use Reqres\Request;
+use Reqres\Superglobals\GET;
 use Reqres\Superglobals\POST;
 use Reqres\Superglobals\SERVER;
 
@@ -61,7 +62,8 @@ trait Controller {
     {
 
         // проверочный код для подтверждения скрипта задармой
-        if (isset($_GET['zd_echo'])) exit($_GET['zd_echo']);        
+        if(isset($_GET['zd_echo'])) exit($_GET['zd_echo']);
+        //if(isset(GET::zd_echo()) exit(GET::zd_echo());
         
         // получаем переменные
         // номер звонящего
@@ -74,63 +76,100 @@ trait Controller {
         $this-> pbx_call_id = POST::pbx_call_id();
         // (опциональный) внутренний номер
         $this-> internal = POST::internal();
+        // (опциональный) набранный номер при исходящих звонках
+        $this-> destination = POST::destination();
 
         if(SERVER::REMOTE_ADDR() !== '185.45.152.42') die;
         
+        // получаем секретную пару, которая должна возвращаться методом
         $secret = $this-> mod_zadarma_get_secret();
-
-        // Signature is send only if you have your API key and secret
         $headers = getallheaders();
+
         // высчитываем подпись
-        $signatureTest = base64_encode(hash_hmac('sha1', $this-> caller_id . $this-> called_did . $this-> call_datetime, $secret[1] ));
-        // если подпись подошла
+        $signatureTest = $this-> destination
+            // при исходящих звонках
+            ? base64_encode(hash_hmac('sha1', $this-> internal . $this-> destination  . $this-> call_datetime, $secret[1] ))
+            // при входящих звонках
+            : base64_encode(hash_hmac('sha1', $this-> caller_id . $this-> called_did . $this-> call_datetime, $secret[1] ));
+
+        // сверяем подпись
         if(!array_key_exists('Signature', $headers)) die;
         if($headers['Signature'] !== $signatureTest) die;
         
         // передаем в модель ключи
         Model::mod_zadarma_client($secret);  
 
-        switch(POST::event()){
+        // получаем событие
+        $event = POST::event();
+        // прописываем обработчики для каждого события
+        $methods = [
+            'NOTIFY_START'      => 'mod_zadarma_inbound_start',
+            'NOTIFY_INTERNAL'   => 'mod_zadarma_inbound_internal',
+            'NOTIFY_END'        => 'mod_zadarma_inbound_end',
+            'NOTIFY_OUT_END'    => 'mod_zadarma_outbound_end',
+            'NOTIFY_OUT_START'  => 'mod_zadarma_outbound_start',
+        ];
 
-            case 'NOTIFY_START' : 
+        // у нас завершающее событие, то сохраняем аудиофайл
+        if(in_array($event, ['NOTIFY_END', 'NOTIFY_OUT_END'])){
 
-                // прописав этот метод можно перенаправить клиента на интересующий номер автоматически
-                if(method_exists($this, 'mod_zadarma_inbound_start')) $this-> mod_zadarma_inbound_start();
-                
-            break;
-            case 'NOTIFY_INTERNAL' : 
+            // при завершенном звонке у нас появляются дополнительная информация о вызове
+            $rus_disposition = [
+                'answered' => 'разговор',
+                'busy' => 'занято',
+                'cancel' => 'отменен',
+                'no answer' => 'без ответа',
+                'failed' => 'не удался',
+                'no money' => 'нет средств, превышен лимит',
+                'unallocated number' => 'номер не существует',
+                'no limit' => 'превышен лимит',
+                'no day limit' => 'превышен дневной лимит',
+                'line limit' => 'превышен лимит линий',
+                'no money, no limit' => 'превышен лимит',
+            ];
 
-                // прописав этот метод можно перенаправить клиента на интересующий номер автоматически
-                if(method_exists($this, 'mod_zadarma_inbound_internal')) $this-> mod_zadarma_inbound_internal();
-                
-            break;
-            case 'NOTIFY_END' : 
+            // длительность в секундах
+            $this-> duration = POST::duration();
+            // состояние звонка
+            $this-> disposition = POST::disposition();
+            // состояние звонка по-русски
+            $this-> disposition_rus = array_key_exists($this-> disposition, $rus_disposition) ? $rus_disposition[$this-> disposition] : '';
+            // код статуса звонка Q.931;
+            $this-> status_code = POST::status_code(); 
+            // 1 - есть запись звонка, 0 - нет записи;
+            $this-> is_recorded = POST::is_recorded() === '1';
+            // id звонка с записью
+            $this-> call_id_with_rec = POST::call_id_with_rec();
 
-                // выжидаем паузу (вдруг аудиофайл еще не сохранился)                
-                //sleep(5);
-                
-                if(isset($this-> mod_zadarma_record_dir))
-                try {
 
-                    // получаем ссылку на запись разговора
-                    $record = Model::mod_zadarma_api_record(null, null, $this-> pbx_call_id);
+            // рекомендуем загружать файл записи не ранее чем через 40 секунд после уведомления т.к. для сохранения файла записи нужно время
+            sleep(40);
 
-                    // обновляем информацию о записи
-                    list($this-> recordpath, $this-> recordname) = $this-> model()-> mod_zadarma_save_record($this-> mod_zadarma_record_dir, $record-> links, $this-> pbx_call_id);
+            if(isset($this-> mod_zadarma_record_dir))
+            try {
 
-                } catch(\Exception $e){
+                // получаем ссылку на запись разговора
+                $record = Model::mod_zadarma_api_record(null, null, $this-> pbx_call_id);
+                // скачиваем запись, сохраяняя ее в указанной папке
+                list($this-> recordpath, $this-> recordname) = $this-> model()-> mod_zadarma_save_record($this-> mod_zadarma_record_dir, $record-> links, $this-> pbx_call_id);
 
-                    die;
-                    // обновляем информацию о записи
-                    //$this-> model()-> mod_zadarma_save_record($e-> getMessage(), $this-> pbx_call_id);
+            } catch(\Exception $e){
 
-                }
+                // обновляем информацию о записи
 
-                if(method_exists($this, 'mod_zadarma_inbound_end')) $this-> mod_zadarma_inbound_end();
+                // останавливаем скрипт
+                die;
 
-            break;
+            }            
         }
-        
+
+        // выполняем обработчики
+        if(array_key_exists($event, $methods))
+            // если обработчик существует
+            if(method_exists($this, $methods[$event])) 
+                // запускаем его
+                $this-> { $methods[$event] }();
+
         die;
     }
 }

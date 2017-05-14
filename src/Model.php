@@ -229,9 +229,9 @@ trait Model {
      * @param life_time – (опциональный) время жизни ссылки в секундах (минимум - 180, максимум - 5184000, по-умолчанию - 1800).
      * @param Pbx_call_id – постоянный ID внешнего звонка в АТС (не меняется при прохождении сценариев, голосового меню, transfer и т.д., отображается в статистике и уведомлениях);
      *
-     * !!! документация задармы чуть-чуть припиздёхивает возвращается не link а links (массив) 
+     * Примечание: достаточно указать один из двух параметров идентификации (pbx_call_id или call_id), при указании pbx_call_id ссылок в ответе на запрос может быть несколько
      *
-     */    
+     */
     static function mod_zadarma_api_record($call_id, $life_time = null, $pbx_call_id = null)
     {
         /*
@@ -239,9 +239,18 @@ trait Model {
             "status":"success",
             "link": "https://api.zadarma.com/v1/pbx/record/download/NjM3M..NzM2Mg/1-1458313316.343456-100-2016-01-11-100155.mp3",
             "lifetime_till": "2016-01-01 23:56:22"
-        }
+
+            или
+
+            "status":"success",
+            "links":[
+                "https://api.zadarma.com/v1/pbx/record/download/NjM3M..NzM2Mg/1-1458313316.343456-100-2016-01-11-100155.mp3",
+                "https://api.zadarma.com/v1/pbx/record/download/pw7Cj..iOzn99/1-1458313475.213487-101-2016-01-11-100211.mp3"
+            ],
+            "lifetime_till": "2016-01-01 23:56:22"
+        }        
         */
-        return static::mod_zadarma_api('/v1/pbx/record/request/', [
+        $result = static::mod_zadarma_api('/v1/pbx/record/request/', [
             
             'call_id' => $call_id, //'1458832388.1585217'
             'lifetime' => $life_time, // 180
@@ -249,6 +258,9 @@ trait Model {
 
         ] + (isset($pbx_call_id) ? [ 'pbx_call_id' => $pbx_call_id ] : []));
         
-    }    
+        // приводим ответ к единому виду (к массиву)
+        if(array_key_exists('link', $result)) $result-> links = [ $result['link'] ];
 
+        return $result;
+    }
 }    
